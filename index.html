@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#080f1e">
+<meta name="description" content="공간도형과 점광원의 좌표를 실시간으로 조정하고 그림자의 면적, 경계, 좌표를 수학적으로 분석하는 인터랙티브 기하 연구실.">
+<title>SHADOW / LAB — 공간도형 투영 연구실</title>
+<style>
+:root{color-scheme:dark;--bg:#0a1020;--panel:#111a2d;--panel2:#17243a;--line:#2a3950;--text:#e9eef9;--muted:#93a6c4;--cyan:#5fe4d0;--blue:#72abff;--pink:#ffbd87;--danger:#ffa0a0;--pill:#20324a}
+*{box-sizing:border-box}
+body{margin:0;background:radial-gradient(ellipse 1300px 800px at 50% -380px,#1c3454 0%,var(--bg) 72%);color:var(--text);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR","Malgun Gothic",sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.shell{max-width:1660px;margin:auto;padding:20px clamp(12px,2vw,28px) 28px}
+.header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:4px 0 20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:12px}
+.brandmark{display:grid;place-items:center;width:42px;height:42px;border:1px solid #427d91;border-radius:13px;background:linear-gradient(135deg,#1f5d6e,#152e45);font:700 22px ui-monospace,monospace;color:#b2fff0}
+h1{font-size:21px;letter-spacing:-.6px;margin:0;line-height:1.2}
+.subtitle{margin:3px 0 0;color:var(--muted);font-size:12px}
+.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#a7efda;border:1px solid #2b7567;border-radius:30px;background:#0e302f;padding:5px 10px}
+.btn{background:#1d2a40;color:var(--text);border:1px solid #33455d;border-radius:9px;padding:9px 12px;transition:background .15s;white-space:nowrap}
+.btn:hover{background:#29405b}
+.btn.primary{background:#164d50;border-color:#327f7e;color:#c8fff4}
+.dashboard{display:grid;grid-template-columns:340px minmax(0,1fr) 288px;gap:14px;align-items:start}
+.panel{background:linear-gradient(180deg,rgba(21,34,54,.96),rgba(13,23,39,.96));border:1px solid var(--line);border-radius:15px;overflow:hidden;min-width:0}
+.panelhead{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:14px 16px 11px;border-bottom:1px solid rgba(59,77,105,.48)}
+.paneltitle{margin:0;font-size:14px;font-weight:750}
+.hint{font-size:11px;color:var(--muted)}
+.controls{padding:14px 16px 15px}
+.section-title{font-weight:700;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:#8bafd6;margin:16px 0 10px;display:flex;align-items:center;justify-content:space-between}
+.section-title:first-child{margin-top:0}
+.shape-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.shape{border-radius:9px;background:#182940;color:#a8bad1;border:1px solid #34445e;padding:9px 2px;font-size:12px}
+.shape.active{color:#b7fff1;background:#174749;border-color:#4aa597;font-weight:700}
+.field{margin-bottom:13px}
+.field-label{display:flex;justify-content:space-between;align-items:center;gap:6px;font-size:12px;color:#c6d3e8;margin-bottom:6px}
+.field-label span:last-child{color:#87d8cb;font-variant-numeric:tabular-nums}
+.field-inputs{display:grid;grid-template-columns:minmax(0,1fr) 68px;gap:10px;align-items:center}
+.field-inputs input[type=range]{width:100%;height:5px;accent-color:var(--cyan);cursor:pointer;margin:0}
+.field-inputs input[type=number]{border:1px solid #334660;background:#101b30;border-radius:7px;color:#e5f4ff;padding:6px 4px;text-align:center;width:100%;font-variant-numeric:tabular-nums;font-size:12px}
+.controls hr{border:0;border-top:1px solid #293850;margin:16px 0}
+.options{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;color:#b0c5dc;font-size:12px}
+.options label{display:flex;align-items:center;gap:5px;cursor:pointer}
+.options input{accent-color:var(--cyan)}
+.content{display:grid;gap:14px;min-width:0}
+.scene-panel{position:relative}
+.canvaswrap{height:398px;min-height:270px;position:relative;background:radial-gradient(ellipse 80% 60% at 46% 70%,#1e344d 0%,#0d1829 80%);overflow:hidden}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+.css-shadow{position:absolute;inset:0;z-index:0;pointer-events:none;background:#050a17;clip-path:polygon(0 0)}
+#plan{position:relative;z-index:1}
+.overlaytop{position:absolute;top:12px;left:12px;display:flex;gap:6px;pointer-events:none}
+.chip{padding:4px 8px;border-radius:20px;background:#081526ae;border:1px solid #49617b80;color:#bbcee3;font-size:11px}
+.axis-legend{position:absolute;bottom:12px;left:12px;display:flex;gap:10px;font-size:11px;color:#aabbcd;pointer-events:none}
+.axis-legend b{color:var(--cyan)}.axis-legend i{color:var(--pink);font-style:normal}
+.scenehelp{position:absolute;bottom:12px;right:12px;color:#9ab0c5;font-size:11px;pointer-events:none}
+.twoviews{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.twoviews .canvaswrap{height:280px}
+.view-caption{padding:8px 12px;border-top:1px solid #23344e;color:#9eacc2;font-size:11px;min-height:36px}
+.inspector{padding:15px}
+.stat{padding:13px 0;border-bottom:1px solid #2a3b53}
+.stat:first-child{padding-top:0}
+.stat-label{color:#9db0ca;font-size:11px}
+.stat-num{color:#e9f3fd;font-size:24px;font-weight:750;font-variant-numeric:tabular-nums;letter-spacing:-.5px;line-height:1.35;word-break:break-word}
+.stat-num em{font:normal 11px sans-serif;color:#9db0ca}
+.stat-sub{font-size:11px;color:#9cb0c9;margin-top:3px;word-break:break-word}
+.formula{margin:14px 0 10px;padding:12px;background:#0b1829;border:1px solid #31455e;border-radius:11px;word-break:break-word}
+.formula-title{font-size:11px;color:#87add4;margin-bottom:7px}
+.formula-code{font:12px/1.75 ui-monospace,SFMono-Regular,Menlo,monospace;color:#d4ffe9;word-break:break-word;white-space:pre-line}
+.warning{display:none;border:1px solid #85565e;background:#3b242f;color:#ffd3d3;padding:11px;margin:0 0 12px;border-radius:9px;font-size:12px}
+.warning.show{display:block}
+.method{font-size:12px;color:#b4c7da;line-height:1.8}
+.method strong{color:#dceaf4}
+.footer{display:flex;gap:10px;justify-content:space-between;flex-wrap:wrap;margin-top:14px;color:#8fa2bd;font-size:11px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:#20443f;border:1px solid #427e6d;border-radius:12px;color:#e3fff4;padding:10px 18px;transition:transform .2s,opacity .2s;z-index:20;box-shadow:0 15px 30px #0009}
+.toast.visible{transform:translate(-50%,0);opacity:1}
+@media(max-width:1320px){.dashboard{grid-template-columns:310px minmax(0,1fr)}.inspector-panel{grid-column:2}.inspector{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}.stat{padding:2px 0;border-bottom:0}.formula{grid-column:span 2;margin:0}.warning{grid-column:span 3}}
+@media(max-width:850px){.dashboard{grid-template-columns:minmax(0,1fr)}.inspector-panel{grid-column:auto}.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:18px}.controls .section-title,.controls .shape-buttons,.controls hr,.controls .options{grid-column:1/-1}.controls .section-title{margin-top:15px}.controls .section-title:first-child{margin-top:0}.scene-panel .canvaswrap{height:350px}}
+@media(max-width:550px){.shell{padding:12px 10px 20px}.header{padding:8px 4px 13px}.header-actions{width:100%}.pill{margin-right:auto}.controls{display:block}.twoviews{grid-template-columns:1fr}.twoviews .canvaswrap{height:275px}.scene-panel .canvaswrap{height:335px}.inspector{display:block}.stat{padding:10px 0;border-bottom:1px solid #2a3b53}.formula{margin:14px 0}.warning{margin:0 0 12px}.scenehelp{font-size:10px}.brandmark{width:37px;height:37px}}
+
+/* =================== SHADOW / LAB 2.0 — design system =================== */
+:root{--bg:#080e1b;--panel:#111d31;--panel2:#17263c;--line:#283c55;--text:#ecf5ff;--muted:#91a8c0;--cyan:#64e7d3;--blue:#83aafa;--pink:#ffd0a0;--pill:#24394d;color-scheme:dark}
+html{scroll-behavior:smooth}
+body{min-height:100vh;color:var(--text);background:radial-gradient(ellipse 65% 55% at 52% -21%,#1f3c59 0%,transparent 80%),radial-gradient(ellipse 35% 48% at 108% 65%,#102d40 0%,transparent 76%),#080e1b;font-size:13px;letter-spacing:-.1px}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.17;z-index:-1;background-image:radial-gradient(#3b5575 0.65px,transparent .65px);background-size:22px 22px;mask-image:linear-gradient(to bottom,#000,transparent 70%)}
+::selection{background:#3a756e;color:#fff}
+.shell{max-width:1632px;padding:26px clamp(16px,3vw,44px) 30px}
+.header{padding:3px 2px 20px;align-items:center;border-bottom:1px solid #2c405344}
+.brand{gap:14px}.brandmark{width:52px;height:52px;color:#a9fff0;border-color:#488f92;border-radius:16px;background:linear-gradient(135deg,#1d5661,#112a3c);box-shadow:inset 0 1px 0 #9dfcdb24,0 8px 35px #1b636b27;flex:none}
+.eyebrow{font-size:9px;font-weight:850;letter-spacing:.2em;color:#75cbbf;margin:0 0 3px}
+.eyebrow span{color:#526d8b}.heading-light{font-weight:400;color:#a4c7dc}
+h1{font-size:25px;letter-spacing:-1.1px;font-weight:850;line-height:1.06}
+.subtitle{font-size:11px;margin-top:5px;letter-spacing:0;color:#95a8c2}
+.header-actions{gap:8px}.pill{border-color:#316e67;background:#102b2d;color:#abf6df;font-size:10px;font-weight:800;letter-spacing:.08em;padding:8px 10px;white-space:nowrap}
+.live-dot,.status-spark{display:inline-block;background:#76f2be;border-radius:50%;width:6px;height:6px;box-shadow:0 0 11px #7debc2}
+.btn{padding:10px 13px;font-size:11px;font-weight:700;background:#15243a;border-color:#2c415b;border-radius:11px;box-shadow:inset 0 1px #ffffff0a}
+.btn:hover{background:#223953;border-color:#58728f;transform:translateY(-1px)}.btn:active{transform:translateY(0)}
+.btn.primary{background:linear-gradient(135deg,#60dbc9,#9be6bf);border:1px solid #a8f5d0;color:#072a2c;font-weight:850;box-shadow:0 6px 24px #44bca842}
+.btn.primary:hover{background:linear-gradient(135deg,#90f6e5,#b3f0ce);border-color:#d5fff4}
+.intro{display:flex;align-items:center;justify-content:space-between;gap:22px;padding:19px 5px 21px}
+.intro-kicker{font-size:9px;letter-spacing:.21em;font-weight:900;color:#86c6ef}
+.intro p{font-size:24px;line-height:1.25;font-weight:800;letter-spacing:-.9px;margin:6px 0 5px}
+.intro span{font-size:11px;color:#8fa7be}
+.intro-mini{display:grid;gap:1px;min-width:180px;padding:10px 16px;border-left:1px solid #31465c;text-align:right}
+.intro-mini>span{font-size:9px;letter-spacing:.18em;color:#7a91ac;font-weight:800}
+.intro-mini strong{font:800 25px/1.15 ui-monospace,monospace;letter-spacing:-1.2px;color:#bcf8ed}
+.intro-mini small{font-size:8px;letter-spacing:.13em;color:#7898aa}
+.dashboard{grid-template-columns:320px minmax(0,1fr) 282px;gap:15px}
+.panel{position:relative;background:linear-gradient(155deg,rgba(19,35,55,.98),rgba(12,24,41,.97));border:1px solid #284159;border-radius:18px;box-shadow:0 13px 45px #00000022,inset 0 1px #ffffff0b}
+.panelhead{min-height:51px;padding:13px 16px;border-color:#2e445a;gap:6px}
+.paneltitle{font-size:12px;font-weight:800;letter-spacing:-.25px;display:flex;align-items:center;gap:8px}
+.panelindex{font:800 10px ui-monospace,monospace;letter-spacing:0;color:#64c7b8;background:#1c3b46;border:1px solid #315764;padding:4px 5px;border-radius:6px}
+.paneltitle .dim{color:#718ca5;font-weight:550}.hint{font-size:10px;color:#819bb6}
+.controls{padding:14px 17px 18px}.section-title{margin:18px 0 10px;font-size:10px;letter-spacing:.06em;color:#94bdd4}
+.section-title:first-child{margin-top:3px}
+.shape-buttons{gap:7px}.shape{min-height:83px;border:1px solid #2d4761;display:flex;flex-direction:column;justify-content:center;gap:6px;align-items:center;background:#17283e;color:#a8bed4;font-size:11px;font-weight:700;border-radius:12px;transition:.18s}
+.shape:hover{background:#203a51;border-color:#659899}.shape.active{background:linear-gradient(135deg,#19514c,#183e4b);color:#c4fff5;border-color:#66bbab;box-shadow:inset 0 0 0 1px #70f8c415,0 5px 18px #0d444b50}
+.shape-icon{line-height:1;font-size:24px;font-weight:400;color:#90accc}.shape.active .shape-icon{color:#a7f7e0}.tetra-icon{font-size:27px}
+.presets{margin-top:12px;display:flex;align-items:center;gap:5px;flex-wrap:wrap}.preset-name{font-size:10px;color:#87a4c3;font-weight:750;margin-right:auto}
+.preset{background:#172c40;border:1px solid #324e65;color:#b5c9d6;border-radius:20px;font-size:10px;white-space:nowrap;padding:5px 8px;cursor:pointer}.preset:hover{border-color:#7acbb6;color:#d8fff0;background:#20443f}
+.field{margin-bottom:12px}.field-label{font-size:11px;font-weight:650;color:#c9d8e9;margin-bottom:7px}.field-label span:last-child{color:#70ccb9;font-weight:750}
+.field-inputs{grid-template-columns:minmax(0,1fr) 68px;gap:11px}
+.field-inputs input[type=range]{appearance:none;-webkit-appearance:none;height:5px;border-radius:10px;background:linear-gradient(90deg,#5adbc6 0%,#5adbc6 var(--slider-progress,50%),#34506b var(--slider-progress,50%),#34506b 100%);accent-color:#6be2c9;outline:none}
+.field-inputs input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;background:#b8fff0;border:3px solid #46aeaa;border-radius:50%;box-shadow:0 0 0 3px #1d3748;cursor:grab}
+.field-inputs input[type=range]::-moz-range-thumb{width:11px;height:11px;background:#b8fff0;border:3px solid #46aeaa;border-radius:50%;box-shadow:0 0 0 3px #1d3748;cursor:grab}
+.field-inputs input[type=range]:active::-webkit-slider-thumb{cursor:grabbing;box-shadow:0 0 0 5px #346665}
+.field-inputs input[type=number]{height:32px;padding:5px 4px;color:#e3f8f5;background:#0d1a2c;border-color:#304961;border-radius:9px;font-size:12px;font-weight:750}
+.field-inputs input[type=number]:focus{outline:2px solid #4eb6aa;outline-offset:0}
+.controls hr{border-color:#2d4358;margin:17px 0}.options{gap:10px;color:#bdd0dd}.options input{accent-color:#59d9c6}
+.canvaswrap{background:radial-gradient(circle at 45% 60%,#1c344a 0%,#112039 58%,#0b172a 100%)}
+.scene-panel .canvaswrap{height:425px}.twoviews{gap:15px}.twoviews .canvaswrap{height:278px}
+.overlaytop{top:14px;left:15px}.chip{border-color:#3c6176a8;background:#0a2135b9;color:#acc9dd;font-size:10px;padding:5px 9px;letter-spacing:.02em;display:inline-flex;align-items:center;gap:8px}
+.axis-legend{gap:14px;font-size:10px}.scenehelp{font-size:10px;bottom:13px;color:#a5bed0}
+.css-shadow{background:linear-gradient(135deg,#091426,#0b1930);opacity:.9}
+.view-caption{border-color:#2a4057;color:#8da5bd;font-size:10px;padding:10px 13px}
+.inspector{padding:15px 16px 17px}.stat{padding:14px 0;border-color:#2d4359}.stat-label{font-size:10px;color:#a1b6cb;display:flex;gap:7px;align-items:center;font-weight:700}
+.unit{color:#72959b;font-size:9px;letter-spacing:.04em;font-weight:500}
+.stat-num{font-size:25px;color:#f1fbff;letter-spacing:-.8px;font-weight:850}
+.stat-feature{margin:-3px -5px 4px;padding:14px 12px 16px;background:linear-gradient(135deg,#1b3c43,#173145);border:1px solid #2a6b68;border-radius:12px;box-shadow:inset 0 1px 0 #bdfce61a}
+.stat-feature .stat-num{font-size:32px;color:#b6fbe9}
+.stat-sub{font-size:10px;color:#889fb5;line-height:1.55}
+.stat-mini{border-bottom:1px solid #2e4559}.stat-coordinate{font-size:14px!important;letter-spacing:0!important;font-weight:700!important;padding:6px 0 0;color:#b5e9df}
+.formula{background:#0c1b2d;border-color:#2b5361;border-radius:12px;margin:15px 0 10px;padding:12px}
+.formula-title{font-size:10px;color:#97cad3;letter-spacing:.06em}.formula-code{font-size:11px;color:#c9f5e8}
+.method{font-size:11px;color:#a5bed2;line-height:1.8}.method strong{display:block;margin-bottom:5px;color:#d1e9e2}
+.footer{border-top:1px solid #2a3f5244;padding:17px 0 1px;font-size:10px;margin-top:18px}
+.toast{background:#17473f;border:1px solid #3d9b80;box-shadow:0 15px 40px #030b17ce;padding:11px 18px}
+@media(max-width:1330px){.dashboard{grid-template-columns:310px minmax(0,1fr)}.inspector-panel{grid-column:2}.inspector{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 24px}.stat-feature{margin:0}.stat{border-bottom:0}.formula{grid-column:auto}.warning{grid-column:span 2}.method{grid-column:span 2}}
+@media(max-width:890px){.shell{padding:18px 16px 30px}.dashboard{grid-template-columns:minmax(0,1fr)}.inspector-panel{grid-column:auto}.controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 17px}.controls .section-title,.controls .shape-buttons,.controls .presets,.controls hr,.controls .options{grid-column:1/-1}.controls .section-title:first-child{margin-top:0}.scene-panel .canvaswrap{height:390px}.inspector{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.shell{padding:14px 11px 27px}.header{padding-bottom:14px;gap:13px}.brandmark{width:44px;height:44px}.brandmark svg{width:29px;height:29px}.eyebrow{font-size:8px}h1{font-size:22px}.subtitle{font-size:10px}.header-actions{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.header-actions .pill{grid-column:1/-1;width:max-content;font-size:9px;padding:5px 9px}.header-actions .btn{font-size:10px;padding:10px 2px}.intro{padding:16px 2px 17px}.intro p{font-size:19px}.intro span{font-size:10px}.intro-mini{display:none}.dashboard{gap:11px}.panel{border-radius:15px}.panelhead{padding:11px 13px}.controls{display:block;padding:14px}.shape{min-height:71px}.presets{gap:5px}.preset-name{margin-right:6px}.scene-panel .canvaswrap{height:350px}.twoviews{grid-template-columns:1fr;gap:11px}.twoviews .canvaswrap{height:300px}.inspector{display:block;padding:14px}.stat{border-bottom:1px solid #2a3d52}.stat-feature{margin:0 0 7px}.stat-mini{border-bottom:1px solid #2a3d52}.formula{margin:12px 0}.method{font-size:11px}.axis-legend{gap:8px}}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+
+/* 안정화 패치: 비활성화된 컨트롤과 입력 오류 표시 */
+.field input:disabled{opacity:.37;cursor:not-allowed}
+.field.is-disabled{opacity:.6}
+.field-inputs input[type=number].invalid-input{border-color:#eaa078;box-shadow:0 0 0 1px #eaa07866}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="header">
+    <div class="brand"><div class="brandmark" aria-hidden="true"><svg viewBox="0 0 52 52" width="34" height="34" fill="none"><path d="M26 5 43 15v22L26 47 9 37V15L26 5Z" stroke="currentColor" stroke-width="1.7"/><path d="M9 15 26 25l17-10M26 25v22M26 5v20" stroke="currentColor" stroke-opacity=".5"/><path d="M26 25 34 36 14 36Z" fill="currentColor" fill-opacity=".35"/></svg></div><div><div class="eyebrow">INTERACTIVE GEOMETRY STUDIO <span> / 01</span></div><h1>SHADOW <span class="heading-light">/ LAB</span></h1><p class="subtitle">공간좌표로 빛의 자취를 계산하다 · 중심투영 실험실</p></div></div>
+    <div class="header-actions"><span class="pill"><span class="live-dot"></span> LIVE PROJECTION</span><button class="btn" id="resetBtn">↺ 초기화</button><button class="btn" id="copyBtn">▣ 결과 복사</button><button class="btn primary" id="saveBtn">↓ 이미지 저장</button></div>
+  </header>
+  <div class="intro"><div><div class="intro-kicker">POINT-LIGHT SHADOW PROJECTION</div><p>좌표를 움직이면, 그림자가 달라집니다.</p><span>입체도형과 점광원의 위치를 바꾸며 기하학적 투영을 직접 관찰하세요.</span></div><div class="intro-mini"><span>SPACE</span><strong>3D → 2D</strong><small>GROUND PLANE · z = 0</small></div></div>
+  <div class="dashboard">
+    <section class="panel">
+      <div class="panelhead"><h2 class="paneltitle"><span class="panelindex">01</span> 실험 조건</h2><span class="hint">슬라이더 / 숫자 직접 입력</span></div>
+      <div class="controls">
+        <div class="section-title">① 공간도형 선택</div>
+        <div class="shape-buttons" id="shapeButtons"><button type="button" class="shape active" data-shape="tetra"><span class="shape-icon tetra-icon" aria-hidden="true">△</span><span>정사면체</span></button><button type="button" class="shape" data-shape="cube"><span class="shape-icon" aria-hidden="true">⬡</span><span>정육면체</span></button><button type="button" class="shape" data-shape="sphere"><span class="shape-icon" aria-hidden="true">◉</span><span>구</span></button></div>
+        <div class="presets"><span class="preset-name">빠른 실험</span><button type="button" data-preset="default" class="preset" title="기본 배치">기본형</button><button type="button" data-preset="lowLight" class="preset" title="광원을 낮춰 그림자 확대">낮은 광원</button><button type="button" data-preset="sideLight" class="preset" title="광원을 옆으로 이동">측면 조명</button></div>
+        <div class="section-title">② 공간도형 좌표 <span style="font-size:10px;letter-spacing:0">도형의 중심 기준</span></div>
+        <div class="field" data-param="ox"><div class="field-label"><span>물체 X</span><span>x</span></div><div class="field-inputs"><input aria-label="물체 X 슬라이더" type="range" min="-8" max="8" step="0.1" value="2"><input aria-label="물체 X 숫자" type="number" min="-8" max="8" step="0.1" value="2"></div></div>
+        <div class="field" data-param="oy"><div class="field-label"><span>물체 Y</span><span>y</span></div><div class="field-inputs"><input aria-label="물체 Y 슬라이더" type="range" min="-8" max="8" step="0.1" value="1"><input aria-label="물체 Y 숫자" type="number" min="-8" max="8" step="0.1" value="1"></div></div>
+        <div class="field" data-param="oz"><div class="field-label"><span>물체 Z (높이)</span><span>z</span></div><div class="field-inputs"><input aria-label="물체 Z 슬라이더" type="range" min="0" max="15" step="0.1" value="4"><input aria-label="물체 Z 숫자" type="number" min="0" max="15" step="0.1" value="4"></div></div>
+        <div class="field" data-param="size"><div class="field-label"><span id="sizeLabel">한 변의 길이</span><span>s</span></div><div class="field-inputs"><input aria-label="물체 크기 슬라이더" type="range" min="0.5" max="6" step="0.1" value="3"><input aria-label="물체 크기 숫자" type="number" min="0.5" max="6" step="0.1" value="3"></div></div>
+        <div class="field" data-param="rot"><div class="field-label"><span>Z축 회전</span><span>°</span></div><div class="field-inputs"><input aria-label="도형 회전 슬라이더" type="range" min="0" max="360" step="1" value="0"><input aria-label="도형 회전 숫자" type="number" min="0" max="360" step="1" value="0"></div></div>
+        <div class="section-title">③ 점광원 좌표</div>
+        <div class="field" data-param="lx"><div class="field-label"><span>광원 X</span><span>x</span></div><div class="field-inputs"><input aria-label="광원 X 슬라이더" type="range" min="-12" max="12" step="0.1" value="0"><input aria-label="광원 X 숫자" type="number" min="-12" max="12" step="0.1" value="0"></div></div>
+        <div class="field" data-param="ly"><div class="field-label"><span>광원 Y</span><span>y</span></div><div class="field-inputs"><input aria-label="광원 Y 슬라이더" type="range" min="-12" max="12" step="0.1" value="0"><input aria-label="광원 Y 숫자" type="number" min="-12" max="12" step="0.1" value="0"></div></div>
+        <div class="field" data-param="lz"><div class="field-label"><span>광원 Z (높이)</span><span>z</span></div><div class="field-inputs"><input aria-label="광원 Z 슬라이더" type="range" min="0.5" max="25" step="0.1" value="10"><input aria-label="광원 Z 숫자" type="number" min="0.5" max="25" step="0.1" value="10"></div></div>
+        <hr>
+        <div class="section-title">화면 옵션</div>
+        <div class="field" data-param="zoom"><div class="field-label"><span>3D 화면 배율</span><span>×</span></div><div class="field-inputs"><input aria-label="3D 확대 슬라이더" type="range" min="0.55" max="2" step="0.05" value="1"><input aria-label="3D 확대 숫자" type="number" min="0.55" max="2" step="0.05" value="1"></div></div>
+        <div class="options"><label><input id="gridCheck" type="checkbox" checked> 바닥 격자</label><label><input id="raysCheck" type="checkbox" checked> 빛의 진행선</label><label><input id="labelsCheck" type="checkbox" checked> 좌표 라벨</label></div>
+      </div>
+    </section>
+    <main class="content">
+      <section class="panel scene-panel">
+        <div class="panelhead"><h2 class="paneltitle"><span class="panelindex">02</span> 3D 투영 장면</h2><span class="hint">마우스 / 터치 드래그로 시점 회전</span></div>
+        <div class="canvaswrap"><canvas id="scene" aria-label="삼차원 공간의 도형과 점광원 그림자"></canvas><div class="overlaytop"><span class="chip"><i class="status-spark"></i> GROUND : Z = 0</span><span class="chip" id="sceneShape">정사면체</span></div><div class="axis-legend"><span><b>■</b> 물체</span><span><i>●</i> 점광원</span><span>■ 그림자</span></div><span class="scenehelp">↻ 화면을 드래그해 회전</span></div>
+      </section>
+      <div class="twoviews">
+        <section class="panel"><div class="panelhead"><h2 class="paneltitle"><span class="panelindex">03</span> 바닥 평면도 <span class="dim">/ XY</span></h2><span class="hint">위에서 본 모습</span></div><div class="canvaswrap"><div id="cssShadow" class="css-shadow" aria-hidden="true"></div><canvas id="plan" aria-label="바닥에서 본 정확한 그림자 영역"></canvas></div><div class="view-caption">초록색: 도형의 수직투영 / 회색: 점광원의 실제 그림자</div></section>
+        <section class="panel"><div class="panelhead"><h2 class="paneltitle"><span class="panelindex">04</span> 광원 측면도</h2><span class="hint">광원-물체 방향에서 본 투영</span></div><div class="canvaswrap"><canvas id="section" aria-label="물체와 광원 및 그림자의 세로 단면"></canvas></div><div class="view-caption">광원에서 연장한 광선과 지면의 교점 · 측면 투영도</div></section>
+      </div>
+    </main>
+    <aside class="panel inspector-panel"><div class="panelhead"><h2 class="paneltitle"><span class="panelindex">05</span> 계산 결과</h2><span class="hint" id="status">정상</span></div><div class="inspector">
+      <div class="warning" id="warning"></div>
+      <div class="stat stat-feature"><div class="stat-label">그림자 면적 <span class="unit">unit²</span></div><div class="stat-num" id="area">—</div><div class="stat-sub" id="areaDesc">바닥 z=0 기준</div></div>
+      <div class="stat"><div class="stat-label">그림자 둘레 <span class="unit">unit</span></div><div class="stat-num" id="perimeter">—</div><div class="stat-sub" id="perimDesc">그림자 외곽선</div></div>
+      <div class="stat"><div class="stat-label">그림자 영역의 도심 <span class="unit">x, y, z</span></div><div class="stat-num" style="font-size:15px;padding-top:6px" id="centroid">—</div><div class="stat-sub" id="centerDesc">바닥 좌표</div></div>
+      <div class="stat stat-mini"><div class="stat-label">물체 중심점의 투영 좌표 <span class="unit">S(P)</span></div><div class="stat-num stat-coordinate" id="centerProjection">—</div><div class="stat-sub">물체 중심에서 바닥으로 연장한 광선의 교점</div></div>
+      <div class="formula"><div class="formula-title">POINT PROJECTION / 핵심 공식</div><div class="formula-code" id="formula">Sx = (Lz·Px − Pz·Lx)/(Lz−Pz)<br>Sy = (Lz·Py − Pz·Ly)/(Lz−Pz)</div></div>
+      <div class="formula"><div class="formula-title" style="display:flex;align-items:center;justify-content:space-between"><span>CSS CLIP-PATH / 생성 코드</span><button class="btn" id="cssBtn" style="padding:3px 7px;font-size:10px">CSS 복사</button></div><div class="formula-code" id="cssFormula" style="max-height:72px;overflow:hidden;font-size:10px">clip-path: polygon(...)</div></div>
+      <div class="method" id="method"><strong>계산 방식</strong><div>정사면체의 꼭짓점 4개를 지면에 중심투영한 뒤, 투영점의 볼록껍질을 계산합니다. 꼭짓점과 그림자 경계는 부동소수점 정밀도로 계산합니다.</div></div>
+    </aside>
+  </div>
+  <footer class="footer"><span>가정: 점광원 · 불투명한 볼록도형 · 무한한 수평 지면 · 공기 중 빛의 직진</span><span>20309 박종현 · Geometry Project / v2.1 · 단일 HTML · GitHub Pages 호환</span></footer>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script>
+(()=>{'use strict';
+const defaults={shape:'tetra',ox:2,oy:1,oz:4,size:3,rot:0,lx:0,ly:0,lz:10,zoom:1};
+let state={...defaults},cam={az:-0.78,el:0.53}, computed=null,drag=null,toastTimer=0;
+const $=(id)=>document.getElementById(id), fmt=(x,d=3)=>Number.isFinite(x)?Number(x.toFixed(d)).toLocaleString('ko-KR',{maximumFractionDigits:d}):'—';
+const v=(x,y,z)=>({x,y,z}),add=(a,b)=>v(a.x+b.x,a.y+b.y,a.z+b.z),sub=(a,b)=>v(a.x-b.x,a.y-b.y,a.z-b.z),mul=(a,t)=>v(a.x*t,a.y*t,a.z*t),dot=(a,b)=>a.x*b.x+a.y*b.y+a.z*b.z,cross=(a,b)=>v(a.y*b.z-a.z*b.y,a.z*b.x-a.x*b.z,a.x*b.y-a.y*b.x),norm=a=>Math.sqrt(dot(a,a));
+const toXY=p=>({x:p.x,y:p.y}),cxy=(a,b)=>a.x*b.y-a.y*b.x,dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+const getSizeOffset=()=>state.shape==='tetra'?state.size/(2*Math.SQRT2):state.size/2;
+function vertices(){const c=v(state.ox,state.oy,state.oz),a=getSizeOffset(),rad=state.rot*Math.PI/180,ca=Math.cos(rad),sa=Math.sin(rad);const pts=state.shape==='tetra'?[[1,1,1],[-1,-1,1],[-1,1,-1],[1,-1,-1]].map(t=>t.map(z=>z*a)):
+[[-1,-1,-1],[-1,-1,1],[-1,1,-1],[-1,1,1],[1,-1,-1],[1,-1,1],[1,1,-1],[1,1,1]].map(t=>t.map(z=>z*a));return pts.map(([x,y,z])=>v(c.x+x*ca-y*sa,c.y+x*sa+y*ca,c.z+z));}
+const faces=(shape)=>shape==='tetra'?[[0,1,2],[0,3,1],[0,2,3],[1,3,2]]:[[0,2,3,1],[4,5,7,6],[0,1,5,4],[2,6,7,3],[0,4,6,2],[1,3,7,5]];
+function convexHull(arr){const p=[...arr].sort((a,b)=>a.x-b.x||a.y-b.y);const uniq=p.filter((t,i)=>i===0||Math.hypot(t.x-p[i-1].x,t.y-p[i-1].y)>1e-9);if(uniq.length<=2)return uniq;const h=[];for(const o of uniq){while(h.length>=2&&cxy({x:h[h.length-1].x-h[h.length-2].x,y:h[h.length-1].y-h[h.length-2].y},{x:o.x-h[h.length-1].x,y:o.y-h[h.length-1].y})<=1e-10)h.pop();h.push(o)}const lower=h.slice();h.length=0;for(let i=uniq.length-1;i>=0;i--){const o=uniq[i];while(h.length>=2&&cxy({x:h[h.length-1].x-h[h.length-2].x,y:h[h.length-1].y-h[h.length-2].y},{x:o.x-h[h.length-1].x,y:o.y-h[h.length-1].y})<=1e-10)h.pop();h.push(o)}lower.pop();h.pop();return lower.concat(h);}
+function polyMetrics(pts){let A=0,X=0,Y=0,P=0;for(let i=0;i<pts.length;i++){let p=pts[i],q=pts[(i+1)%pts.length],d=p.x*q.y-q.x*p.y;A+=d;X+=(p.x+q.x)*d;Y+=(p.y+q.y)*d;P+=dist(p,q)}return {area:Math.abs(A)/2,perimeter:P,centroid:Math.abs(A)>1e-10?{x:X/(3*A),y:Y/(3*A)}:{x:NaN,y:NaN}};}
+function calculate(){const L=v(state.lx,state.ly,state.lz),C=v(state.ox,state.oy,state.oz),rad=state.shape==='sphere'?state.size:0,verts=state.shape==='sphere'?[]:vertices(), minZ=state.shape==='sphere'?C.z-rad:Math.min(...verts.map(p=>p.z)),maxZ=state.shape==='sphere'?C.z+rad:Math.max(...verts.map(p=>p.z));let fail='';if(minZ < -1e-7)fail='물체 일부가 지면 아래에 있습니다. 물체 Z를 높이거나 크기를 줄이세요.';if(L.z<=maxZ+0.00001)fail='광원은 물체의 모든 부분보다 높아야 합니다. 광원 Z를 높이세요.';
+let result={L,C,verts,minZ,maxZ,shape:state.shape,valid:false,warning:fail};if(fail)return result;
+if(state.shape!=='sphere'){
+ const project=p=>v(L.x+L.z*(p.x-L.x)/(L.z-p.z),L.y+L.z*(p.y-L.y)/(L.z-p.z),0);
+ const projected=verts.map(project),outline=convexHull(projected.map(toXY)),metrics=polyMetrics(outline);
+ if(outline.length<3||!Number.isFinite(metrics.area))return {...result,warning:'현재 좌표에서는 그림자 다각형을 계산할 수 없습니다.'};
+ return {...result,valid:true,projected,outline,metrics,footprint:convexHull(verts.map(toXY))};
+}
+// A sphere's tangent cone intersects z=0 in an exact ellipse in the supported geometry.
+// The following coefficients solve the exact quadratic conic, not a guessed circle.
+const a=C.x-L.x,b=C.y-L.y,c=C.z-L.z,h=L.z,q=a*a+b*b+c*c-rad*rad;
+const A=q-a*a,B=-a*b,D=q-b*b,bx=c*h*a,by=c*h*b,k=(q-c*c)*h*h,det=A*D-B*B;
+if(!Number.isFinite(det)||det<=1e-12||q<=0)return {...result,warning:'그림자의 닫힌 타원 계산이 불가능합니다.'};
+const ux=-(D*bx-B*by)/det,uy=-(-B*bx+A*by)/det;
+const rhs=(D*bx*bx-2*B*bx*by+A*by*by)/det-k;
+const discriminant=Math.sqrt((A-D)**2+4*B**2),lamMin=(A+D-discriminant)/2,lamMax=(A+D+discriminant)/2;
+if(!Number.isFinite(rhs)||rhs<=0||lamMin<=0)return {...result,warning:'타원 방정식을 계산할 수 없습니다.'};
+let ex,ey;if(Math.abs(B)>1e-10){ex=B;ey=lamMin-A;const nn=Math.hypot(ex,ey);ex/=nn;ey/=nn}else{ex=A<=D?1:0;ey=A<=D?0:1}
+const major=Math.sqrt(rhs/lamMin),minor=Math.sqrt(rhs/lamMax),cx=L.x+ux,cy=L.y+uy;
+const outline=Array.from({length:360},(_,i)=>{const t=2*Math.PI*i/360;return {x:cx+major*Math.cos(t)*ex-minor*Math.sin(t)*ey,y:cy+major*Math.cos(t)*ey+minor*Math.sin(t)*ex}});
+const H=((major-minor)/(major+minor))**2;
+const perim=Math.PI*(major+minor)*(1+3*H/(10+Math.sqrt(4-3*H)));
+const metrics={area:Math.PI*major*minor,perimeter:perim,centroid:{x:cx,y:cy}};
+return {...result,valid:true,outline,metrics,footprint:Array.from({length:100},(_,i)=>({x:C.x+rad*Math.cos(i*2*Math.PI/100),y:C.y+rad*Math.sin(i*2*Math.PI/100)})),ellipse:{cx,cy,major,minor,ex,ey,A,B,D,bx,by,k,det,rhs}};
+}
+function context(canvas){const rect=canvas.getBoundingClientRect(),w=Math.max(rect.width,1),h=Math.max(rect.height,1),dpr=Math.min(window.devicePixelRatio||1,2),dw=Math.round(w*dpr),dh=Math.round(h*dpr);if(canvas.width!==dw||canvas.height!==dh){canvas.width=dw;canvas.height=dh}const ctx=canvas.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);return {ctx,w,h};}
+function line(ctx,a,b,color='#6d8dac',thick=1,dashed=[]){ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.strokeStyle=color;ctx.lineWidth=thick;ctx.setLineDash(dashed);ctx.stroke();ctx.setLineDash([])}
+function path(ctx,pts,fill,stroke,thick=1,closed=true){if(!pts||pts.length===0)return;ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i].x,pts[i].y);if(closed)ctx.closePath();if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.lineWidth=thick;ctx.stroke()}}
+function dotAt(ctx,p,r,fill,stroke){ctx.beginPath();ctx.arc(p.x,p.y,r,0,Math.PI*2);if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.lineWidth=1.4;ctx.strokeStyle=stroke;ctx.stroke()}}
+function textAt(ctx,s,p,color='#a4b8d0',align='left'){ctx.font='11px -apple-system, sans-serif';ctx.fillStyle=color;ctx.textAlign=align;ctx.fillText(s,p.x,p.y)}
+function shadowNotice(ctx,w,h){ctx.fillStyle='#c5d0e0';ctx.textAlign='center';ctx.font='13px sans-serif';ctx.fillText('입력 조건을 만족하면 그림자가 표시됩니다.',w/2,h-30)}
+function basis(){const az=cam.az,el=cam.el;return{right:v(-Math.sin(az),Math.cos(az),0),up:v(-Math.sin(el)*Math.cos(az),-Math.sin(el)*Math.sin(az),Math.cos(el)),toward:v(Math.cos(el)*Math.cos(az),Math.cos(el)*Math.sin(az),Math.sin(el))}}
+function drawScene(r){const {ctx,w,h}=context($('scene')),bas=basis(),zoom=state.zoom,sc=Math.min(w/23,h/16)*zoom;const target=v(0,0,2.0);const project=p=>{const d=sub(p,target);return{x:w*.51+sc*dot(d,bas.right),y:h*.63-sc*dot(d,bas.up)}};
+// ground grid
+if($('gridCheck').checked){for(let k=-20;k<=20;k+=2){line(ctx,project(v(k,-20,0)),project(v(k,20,0)),k===0?'#526480':'#2c405a',k===0?1.4:.7);line(ctx,project(v(-20,k,0)),project(v(20,k,0)),k===0?'#526480':'#2c405a',k===0?1.4:.7)}}
+line(ctx,project(v(0,0,0)),project(v(2,0,0)),'#ff908b',2);line(ctx,project(v(0,0,0)),project(v(0,2,0)),'#80aaff',2);line(ctx,project(v(0,0,0)),project(v(0,0,3)),'#94e6c3',1.5);
+if($('labelsCheck').checked){textAt(ctx,'X',project(v(2.3,0,0)),'#ff9894');textAt(ctx,'Y',project(v(0,2.3,0)),'#8eaaff');textAt(ctx,'Z',project(v(0,0,3.2)),'#a4ebcd')}
+if(r.valid){ctx.save();ctx.shadowColor='#000000af';ctx.shadowBlur=16;path(ctx,r.outline.map(p=>project(v(p.x,p.y,.008))),'#070d19c9',null);ctx.restore();path(ctx,r.outline.map(p=>project(v(p.x,p.y,.018))),'#1b283f9c','#91a5bf',1.8)}
+// light rays (draw before opaque mesh)
+if(r.valid && $('raysCheck').checked){const ends=r.shape==='sphere'?r.outline.filter((_,i)=>i%45===0):r.projected.map(toXY);for(const s of ends){line(ctx,project(r.L),project(v(s.x,s.y,0)),'#ffc19e79',1,[5,5])}}
+const centerGround=v(r.C.x,r.C.y,0);line(ctx,project(r.C),project(centerGround),'#70edd27a',1,[3,4]);
+if(r.shape==='sphere'){
+ const p=project(r.C),R=state.size*sc;const grd=ctx.createRadialGradient(p.x-R*.4,p.y-R*.5,R*.03,p.x,p.y,R*1.1);grd.addColorStop(0,'#b0fff3');grd.addColorStop(.45,'#51b9b7');grd.addColorStop(1,'#214861');ctx.beginPath();ctx.arc(p.x,p.y,R,0,2*Math.PI);ctx.fillStyle=grd;ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#b6f8eb';ctx.stroke();
+ }else{
+ let polygons=faces(r.shape).map(ids=>{const ps=ids.map(i=>r.verts[i]),c=mul(ps.reduce((a,p)=>add(a,p),v(0,0,0)),1/ps.length);let n=cross(sub(ps[1],ps[0]),sub(ps[2],ps[0]));if(dot(n,sub(c,r.C))<0)n=mul(n,-1);const ln=norm(n)||1;n=mul(n,1/ln);const faceBright=Math.max(0,dot(n,mul(sub(r.L,c),1/(norm(sub(r.L,c))||1))));return{ps,depth:dot(c,bas.toward),vis:dot(n,bas.toward)>-0.01,bright:faceBright}}).filter(f=>f.vis).sort((a,b)=>a.depth-b.depth);
+ for(const f of polygons){const color=`rgba(${Math.round(26+f.bright*35)},${Math.round(108+f.bright*75)},${Math.round(121+f.bright*63)},0.91)`;path(ctx,f.ps.map(project),color,'#a3efe2',1.4)}
+ for(const p of r.verts){dotAt(ctx,project(p),3,'#e5fff7','#1f3d45')}
+ }
+const lp=project(r.L);ctx.save();const halo=ctx.createRadialGradient(lp.x,lp.y,2,lp.x,lp.y,32);halo.addColorStop(0,'#ffedc8b8');halo.addColorStop(1,'#ffab7a00');ctx.fillStyle=halo;ctx.beginPath();ctx.arc(lp.x,lp.y,33,0,Math.PI*2);ctx.fill();ctx.restore();dotAt(ctx,lp,7,'#ffcf9e','#fff4dc');
+if($('labelsCheck').checked){textAt(ctx,`L (${fmt(r.L.x,1)}, ${fmt(r.L.y,1)}, ${fmt(r.L.z,1)})`,{x:lp.x+12,y:lp.y-6},'#ffcf9e');const cp=project(r.C);textAt(ctx,`P (${fmt(r.C.x,1)}, ${fmt(r.C.y,1)}, ${fmt(r.C.z,1)})`,{x:cp.x+12,y:cp.y-9},'#a7f7df')}
+if(!r.valid)shadowNotice(ctx,w,h);
+}
+function planTransform(r,w,h){const points=[{x:0,y:0},toXY(r.L),toXY(r.C),...(r.valid?r.outline:[]),...(r.valid?r.footprint:[])];const minx=Math.min(...points.map(p=>p.x)),maxx=Math.max(...points.map(p=>p.x)),miny=Math.min(...points.map(p=>p.y)),maxy=Math.max(...points.map(p=>p.y));const cx=(minx+maxx)/2,cy=(miny+maxy)/2,spanx=Math.max(12,(maxx-minx)*1.35),spany=Math.max(12,(maxy-miny)*1.4),scale=Math.min((w-35)/spanx,(h-35)/spany);return {scale,to:p=>({x:w/2+(p.x-cx)*scale,y:h/2-(p.y-cy)*scale})};}
+function drawPlan(r){const {ctx,w,h}=context($('plan')),{scale,to}=planTransform(r,w,h);const css=r.valid?'polygon('+r.outline.map(p=>{const o=to(p);return (o.x/w*100).toFixed(3)+'% '+(o.y/h*100).toFixed(3)+'%'}).join(', ')+')':'polygon(0 0)';$('cssShadow').style.clipPath=css;$('cssFormula').textContent='clip-path: '+css+';';if($('gridCheck').checked){const lim=Math.min(200,Math.ceil(Math.max(w,h)/scale)+30);for(let i=-lim;i<=lim;i+=2){line(ctx,to({x:i,y:-lim}),to({x:i,y:lim}),'#30445d',.7);line(ctx,to({x:-lim,y:i}),to({x:lim,y:i}),'#30445d',.7)}}
+line(ctx,to({x:-500,y:0}),to({x:500,y:0}),'#57728d',1.2);line(ctx,to({x:0,y:-500}),to({x:0,y:500}),'#57728d',1.2);
+if(r.valid){path(ctx,r.outline.map(to),null,'#b3bfd4',1.6);path(ctx,r.footprint.map(to),'#50ddc82c','#59ddc3',1.8);const c=to(r.metrics.centroid);dotAt(ctx,c,3.5,'#c8d4e6');if($('labelsCheck').checked)textAt(ctx,'S', {x:c.x+6,y:c.y-8},'#c9d9eb')}
+const cc=to(r.C),ll=to(r.L);dotAt(ctx,cc,5,'#5fe4d0','#b1ffed');dotAt(ctx,ll,5,'#ffbd87','#fff0dc');if($('labelsCheck').checked){textAt(ctx,'P (수직 아래)',{x:cc.x+8,y:cc.y-7},'#9beadb');textAt(ctx,'L (수직 아래)',{x:ll.x+8,y:ll.y+15},'#ffcba6')}
+ctx.font='10px sans-serif';ctx.textAlign='left';ctx.fillStyle='#95a9bf';ctx.fillText('축척 1단위 ≈ '+fmt(scale,1)+'px',10,h-10);
+if(!r.valid)shadowNotice(ctx,w,h);
+}
+function drawSection(r){const {ctx,w,h}=context($('section'));const dx=r.C.x-r.L.x,dy=r.C.y-r.L.y,dh=Math.hypot(dx,dy),ex=dh>1e-8?dx/dh:1,ey=dh>1e-8?dy/dh:0;const lx=0,cx=dh;const relevant=r.valid?r.outline.map(p=>({u:(p.x-r.L.x)*ex+(p.y-r.L.y)*ey,z:0})):[];
+const minU=Math.min(-2,dh-2,...relevant.map(p=>p.u)),maxU=Math.max(4,dh+2,...relevant.map(p=>p.u));const maxZ=Math.max(r.L.z+2,r.C.z+2),minZ=-1.2;
+const scale=Math.max(0.1,Math.min((w-36)/Math.max(10,(maxU-minU)*1.2),(h-32)/Math.max(11,(maxZ-minZ)*1.18))),mid=(minU+maxU)/2;
+const to=p=>({x:w/2+(p.u-mid)*scale,y:h-23-p.z*scale});
+line(ctx,to({u:minU-20,z:0}),to({u:maxU+20,z:0}),'#7b8da6',2);
+for(let i=0;i<=Math.ceil(maxZ);i+=2){const y=to({u:0,z:i}).y;line(ctx,{x:0,y},{x:w,y},'#293e57',.7);ctx.fillStyle='#8095b0';ctx.font='10px sans-serif';ctx.fillText('z='+i,8,y-3)}
+if(r.valid){let min=Math.min(...relevant.map(p=>p.u)),max=Math.max(...relevant.map(p=>p.u));line(ctx,to({u:min,z:0}),to({u:max,z:0}),'#8c9db9',5);if($('raysCheck').checked){const list=[min,max];for(const u of list){line(ctx,to({u:0,z:r.L.z}),to({u,z:0}),'#ffbc9199',1.2,[5,5])}}}
+const obj=to({u:dh,z:r.C.z});if(r.shape==='sphere'){dotAt(ctx,obj,state.size*scale,'#3ca39c','#9af7e4')}else{const polyPts=r.verts.map(p=>({u:(p.x-r.L.x)*ex+(p.y-r.L.y)*ey,z:p.z}));const outline=convexHull(polyPts.map(p=>({x:p.u,y:p.z})));path(ctx,outline.map(p=>to({u:p.x,z:p.y})),'#2a8e939e','#9af7e4',2)}
+const L=to({u:0,z:r.L.z});dotAt(ctx,L,7,'#ffcd95','#fff2db');if($('labelsCheck').checked){textAt(ctx,'광원 L',{x:L.x+10,y:L.y-10},'#ffd0a6');textAt(ctx,'물체 P',{x:obj.x+8,y:obj.y-12},'#9af7e4')}
+if(!r.valid)shadowNotice(ctx,w,h);
+}
+function updateInfo(r){$('sceneShape').textContent=state.shape==='tetra'?'정사면체':state.shape==='cube'?'정육면체':'구';$('sizeLabel').textContent=state.shape==='sphere'?'반지름':'한 변의 길이';$('status').textContent=r.valid?'정상 계산':'조건 확인';$('status').style.color=r.valid?'#86dfc8':'#ffbca9';$('warning').classList.toggle('show',!r.valid);$('warning').textContent=r.warning;
+$('cssBtn').disabled=!r.valid;$('centerProjection').textContent=r.valid?`(${fmt(r.L.x+r.L.z*(r.C.x-r.L.x)/(r.L.z-r.C.z),3)}, ${fmt(r.L.y+r.L.z*(r.C.y-r.L.y)/(r.L.z-r.C.z),3)}, 0)`:'—';$('area').textContent=r.valid?fmt(r.metrics.area,4):'—';$('perimeter').textContent=r.valid?fmt(r.metrics.perimeter,4):'—';$('centroid').textContent=r.valid?`(${fmt(r.metrics.centroid.x,3)}, ${fmt(r.metrics.centroid.y,3)}, 0)`:'—';
+$('areaDesc').textContent=state.shape==='sphere'?'접선 원뿔과 평면의 교선으로 정확 계산':'볼록 다각형의 신발끈 공식으로 정확 계산';
+$('perimDesc').textContent=state.shape==='sphere'?'타원 둘레: 라마누잔 근사식 (근삿값)':'투영 꼭짓점 사이 거리의 합';
+$('centerDesc').textContent=state.shape==='sphere'?'타원의 중심 좌표':'그림자 다각형의 무게중심';
+if(state.shape==='sphere'&&r.valid){const e=r.ellipse;$('formula').textContent=`그림자 경계 = 타원\n중심 = (${fmt(e.cx,3)}, ${fmt(e.cy,3)})\n장반경 = ${fmt(e.major,3)}\n단반경 = ${fmt(e.minor,3)}\n면적 = πab = ${fmt(r.metrics.area,4)}`;$('method').innerHTML='<strong>계산 방식</strong><div>점광원에서 구에 접하는 원뿔의 정확한 이차곡선 방정식을 계산합니다. 지면과의 교선은 타원이며, 3D·평면도에서는 이를 360개 점으로 표본화해 그립니다. 면적은 장·단반경으로 계산하며, CSS 경계는 360각형 근사입니다.</div>'}
+else{$('formula').textContent='Sx = (Lz·Px − Pz·Lx)/(Lz−Pz)\nSy = (Lz·Py − Pz·Ly)/(Lz−Pz)';$('method').innerHTML=`<strong>계산 방식</strong><div>${state.shape==='tetra'?'정사면체의 4개':'정육면체의 8개'} 꼭짓점을 z=0 평면에 중심투영한 뒤 투영점의 볼록껍질을 구합니다. 그 결과로 실제 그림자 영역과 면적, 둘레를 계산합니다.</div>`}
+}
+function update(){computed=calculate();updateInfo(computed);drawScene(computed);drawPlan(computed);drawSection(computed);syncSliderFill()}
+function showToast(message){const el=$('toast');el.textContent=message;el.classList.add('visible');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('visible'),2400)}
+function setField(field,n){let sl=field.querySelector('input[type=range]'),num=field.querySelector('input[type=number]');sl.value=String(n);num.value=String(n);num.classList.remove('invalid-input')}
+function setupFields(){document.querySelectorAll('[data-param]').forEach(field=>{
+ const key=field.dataset.param,slider=field.querySelector('input[type=range]'),num=field.querySelector('input[type=number]');
+ const apply=(n)=>{state[key]=Math.round(n*10000)/10000;setField(field,state[key]);num.classList.remove('invalid-input');update()};
+ slider.addEventListener('input',()=>apply(Number(slider.value)));
+ num.addEventListener('input',()=>{
+  const raw=num.value.trim(),n=Number(raw),min=Number(slider.min),max=Number(slider.max);
+  const valid=raw!==''&&Number.isFinite(n)&&n>=min&&n<=max;
+  num.classList.toggle('invalid-input',!valid);
+  if(valid){state[key]=n;slider.value=String(n);update()}
+ });
+ num.addEventListener('change',()=>{
+  const n=Number(num.value),min=Number(slider.min),max=Number(slider.max);
+  apply(num.value.trim()===''||!Number.isFinite(n)?state[key]:Math.max(min,Math.min(max,n)));
+ });
+ })}
+function selectShape(shape){
+ state.shape=shape;
+ document.querySelectorAll('.shape').forEach(btn=>{const selected=btn.dataset.shape===shape;btn.classList.toggle('active',selected);btn.setAttribute('aria-pressed',String(selected))});
+ const size=document.querySelector('[data-param=size]'),sl=size.querySelector('input[type=range]'),n=size.querySelector('input[type=number]');
+ sl.max=n.max=shape==='sphere'?'5':'6';if(state.size>Number(sl.max)){state.size=Number(sl.max);setField(size,state.size)}
+ const rotate=document.querySelector('[data-param=rot]'),isSphere=shape==='sphere';
+ rotate.classList.toggle('is-disabled',isSphere);
+ rotate.querySelectorAll('input').forEach(input=>input.disabled=isSphere);
+ rotate.title=isSphere?'구는 회전해도 형태와 그림자가 변하지 않습니다.':'';
+ update();
+}
+function reset(){state={...defaults};cam={az:-.78,el:.53};document.querySelectorAll('[data-param]').forEach(field=>setField(field,state[field.dataset.param]));selectShape(state.shape);showToast('초기 좌표로 복원했습니다.')}
+function copyText(){const text=`도형: ${state.shape==='tetra'?'정사면체':state.shape==='cube'?'정육면체':'구'}\n물체 중심: (${state.ox}, ${state.oy}, ${state.oz})\n크기: ${state.size} (${state.shape==='sphere'?'반지름':'한 변의 길이'})\n회전: ${state.rot}°\n광원: (${state.lx}, ${state.ly}, ${state.lz})\n바닥: z=0\n그림자 면적: ${computed.valid?fmt(computed.metrics.area,4):'계산 불가'}\n그림자 중심: ${computed.valid?`(${fmt(computed.metrics.centroid.x,3)}, ${fmt(computed.metrics.centroid.y,3)}, 0)`:'계산 불가'}`;if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(text).then(()=>showToast('좌표와 결과를 복사했습니다.')).catch(()=>fallbackCopy(text))}else fallbackCopy(text)}
+function fallbackCopy(text){const t=document.createElement('textarea');t.value=text;t.style.position='fixed';t.style.opacity='0';document.body.appendChild(t);t.select();let ok=false;try{ok=document.execCommand('copy')}catch{}t.remove();showToast(ok?'좌표와 결과를 복사했습니다.':'복사 기능을 사용할 수 없는 환경입니다.')}
+function saveImage(){try{const canvases=[$('scene'),$('plan'),$('section')],out=document.createElement('canvas'),W=1440,H=1020;out.width=W;out.height=H;const g=out.getContext('2d');g.fillStyle='#0b1220';g.fillRect(0,0,W,H);g.fillStyle='#e9eef9';g.font='bold 30px sans-serif';g.fillText('Shadow Geometry Lab — 그림자 투영 결과',42,56);g.font='19px sans-serif';g.fillStyle='#b7c5dc';g.fillText(`도형: ${state.shape==='tetra'?'정사면체':state.shape==='cube'?'정육면체':'구'}    물체: (${state.ox}, ${state.oy}, ${state.oz})    광원: (${state.lx}, ${state.ly}, ${state.lz})    크기: ${state.size}`,42,92);g.fillText(`그림자 면적: ${computed.valid?fmt(computed.metrics.area,4):'계산불가'}    그림자 중심: ${computed.valid?`(${fmt(computed.metrics.centroid.x,3)}, ${fmt(computed.metrics.centroid.y,3)})`:'계산불가'}`,42,122);
+ const draw=(src,x,y,w,h,label)=>{g.fillStyle='#122037';g.fillRect(x,y,w,h);if(src.id==='plan'&&computed.valid){const br=src.getBoundingClientRect(),pt=planTransform(computed,Math.max(br.width,1),Math.max(br.height,1)).to;g.beginPath();computed.outline.forEach((p,i)=>{const q=pt(p),xx=x+q.x/Math.max(br.width,1)*w,yy=y+q.y/Math.max(br.height,1)*h;i?g.lineTo(xx,yy):g.moveTo(xx,yy)});g.closePath();g.fillStyle='#050a17';g.fill()}g.drawImage(src,x,y,w,h);g.fillStyle='#d4e8f4';g.font='19px sans-serif';g.fillText(label,x+12,y+28)};
+ draw(canvases[0],42,150,1356,535,'3D 공간');draw(canvases[1],42,698,665,275,'바닥 평면도');draw(canvases[2],733,698,665,275,'측면도');const a=document.createElement('a');a.download='shadow-geometry-result.png';a.href=out.toDataURL('image/png');document.body.appendChild(a);a.click();a.remove();showToast('그림 저장을 시작했습니다.')}catch(err){console.error('이미지 저장 오류:',err);showToast('이미지를 저장하지 못했습니다. 브라우저 권한을 확인하세요.')}}
+$('cssBtn').addEventListener('click',()=>{const txt=$('cssFormula').textContent;if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(txt).then(()=>showToast('그림자 CSS를 복사했습니다.')).catch(()=>fallbackCopy(txt));else fallbackCopy(txt)});
+function syncSliderFill(){document.querySelectorAll('input[type=range]').forEach(el=>{const min=Number(el.min),max=Number(el.max);const n=(Number(el.value)-min)/(max-min)*100;el.style.setProperty('--slider-progress',Math.max(0,Math.min(100,n))+'%')})}
+function applyPreset(key){const variants={default:{...defaults},lowLight:{...defaults,oz:3.5,lz:6},sideLight:{...defaults,lx:-7,ly:4,lz:11}};const p=variants[key];if(!p)return;state={...p};document.querySelectorAll('[data-param]').forEach(field=>setField(field,state[field.dataset.param]));selectShape(state.shape);showToast(key==='default'?'초기 조건으로 복원했습니다.':key==='lowLight'?'낮은 광원 실험 조건을 적용했습니다.':'측면 조명 실험 조건을 적용했습니다.')}
+document.querySelectorAll('[data-preset]').forEach(btn=>btn.addEventListener('click',()=>applyPreset(btn.dataset.preset)));
+$('shapeButtons').addEventListener('click',e=>{const b=e.target.closest('[data-shape]');if(b)selectShape(b.dataset.shape)});$('resetBtn').addEventListener('click',reset);$('copyBtn').addEventListener('click',copyText);$('saveBtn').addEventListener('click',saveImage);for(const id of ['gridCheck','raysCheck','labelsCheck'])$(id).addEventListener('change',update);
+$('scene').addEventListener('pointerdown',e=>{drag={x:e.clientX,y:e.clientY,az:cam.az,el:cam.el};$('scene').setPointerCapture(e.pointerId)});
+$('scene').addEventListener('pointermove',e=>{if(!drag)return;cam.az=drag.az+(e.clientX-drag.x)*.008;cam.el=Math.max(.17,Math.min(1.35,drag.el-(e.clientY-drag.y)*.007));drawScene(computed)});
+for(const type of ['pointerup','pointercancel','lostpointercapture'])$('scene').addEventListener(type,()=>drag=null);
+if('ResizeObserver'in window)new ResizeObserver(()=>update()).observe(document.querySelector('.content'));else window.addEventListener('resize',update);
+setupFields();selectShape(state.shape);
+})();
+</script>
+</body>
+</html>
